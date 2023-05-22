@@ -1,50 +1,62 @@
-import express from "express";
+const express = require("express");
 const app = express();
-import ejs from "ejs";
+const ejs = require("ejs");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
 // const https = require("https");
-import fetch from "node-fetch";
-
-// api key
-const myKey = "0cd949165092b5930d30356ca092ce08";
-
-// k to cel
-function ktoC(k) {
-  return (k - 273.15).toFixed(2);
-}
+// const fetch = require("node-fetch");
+const Student = require("./models/student");
 
 // middleware
 app.use(express.static("public"));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.set("view engine", "ejs");
+
+mongoose
+  .connect("mongodb://127.0.0.1:27017/studentDB", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("Successfully connected to mongoDB");
+  })
+  .catch((e) => {
+    console.log("Connection failed.");
+    console.log(e);
+  });
 
 app.get("/", (req, res) => {
-  res.render("index.ejs");
+  res.send("This is homepage.");
 });
 
-app.get("/:city", async (req, res) => {
-  let { city } = req.params;
-  let url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${myKey}`;
+app.get("/students", async (req, res) => {
+  let data = await Student.find();
+  res.render("students.ejs", { data });
+});
 
-  let d = await fetch(url);
-  let djs = await d.json();
-  let { temp } = djs.main;
-  let newTemp = ktoC(temp);
-  res.render("weather.ejs", { djs, newTemp });
+app.get("/students/insert", (req, res) => {
+  res.render("studentInsert.ejs");
+});
 
-  // // get request made by node.js
-  // https
-  //   .get(url, (response) => {
-  //     console.log("statusCode:", response.statusCode);
-  //     console.log("headers:", response.headers);
-
-  //     response.on("data", (d) => {
-  //       let djs = JSON.parse(d);
-  //       let { temp } = djs.main;
-  //       let newTemp = ktoC(temp);
-  //       res.render("weather.ejs", { djs, newTemp });
-  //     });
-  //   })
-  //   .on("error", (e) => {
-  //     console.log(e);
-  //   });
+app.post("/students/insert", (req, res) => {
+  let { id, name, age, merit, other } = req.body;
+  let newStudent = new Student({
+    id,
+    name,
+    age,
+    scholarship: { merit, other },
+  });
+  newStudent
+    .save()
+    .then(() => {
+      console.log("Student accepted.");
+      res.render("accept.ejs");
+    })
+    .catch((e) => {
+      console.log("Student not accepted.");
+      console.log(e);
+      res.render("reject.ejs");
+    });
 });
 
 app.listen(3000, () => {
