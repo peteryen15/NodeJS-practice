@@ -6,10 +6,12 @@ const bodyParser = require("body-parser");
 // const https = require("https");
 // const fetch = require("node-fetch");
 const Student = require("./models/student");
+const methodOverride = require("method-override");
 
 // middleware
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
 app.set("view engine", "ejs");
 
 mongoose
@@ -30,12 +32,31 @@ app.get("/", (req, res) => {
 });
 
 app.get("/students", async (req, res) => {
-  let data = await Student.find();
-  res.render("students.ejs", { data });
+  try {
+    let data = await Student.find();
+    res.render("students.ejs", { data });
+  } catch {
+    res.send("Error with finding data.");
+  }
 });
 
 app.get("/students/insert", (req, res) => {
   res.render("studentInsert.ejs");
+});
+
+app.get("/students/:id", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let data = await Student.findOne({ id });
+    if (data !== null) {
+      res.render("studentPage.ejs", { data });
+    } else {
+      res.send("Cannot find this student. Please enter a valid id.");
+    }
+  } catch (e) {
+    res.send("Error");
+    console.log(e);
+  }
 });
 
 app.post("/students/insert", (req, res) => {
@@ -57,6 +78,39 @@ app.post("/students/insert", (req, res) => {
       console.log(e);
       res.render("reject.ejs");
     });
+});
+
+app.get("/students/edit/:id", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let data = await Student.findOne({ id });
+    if (data !== null) {
+      res.render("edit.ejs", { data });
+    } else {
+      res.send("Cannot find student.");
+    }
+  } catch {
+    res.send("Error");
+  }
+});
+
+app.put("/students/edit/:id", async (req, res) => {
+  let { id, name, age, merit, other } = req.body;
+  try {
+    let d = await Student.findOneAndUpdate(
+      { id },
+      { id, name, age, scholarship: { merit, other } },
+      { new: true, runValidators: true }
+    );
+    res.redirect(`/students/${id}`);
+  } catch {
+    res.render("reject.ejs");
+  }
+});
+
+app.get("/*", (req, res) => {
+  res.status(404);
+  res.send("Not allowed.");
 });
 
 app.listen(3000, () => {
