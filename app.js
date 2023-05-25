@@ -108,6 +108,19 @@ app.put("/students/edit/:id", async (req, res) => {
   }
 });
 
+app.delete("/students/delete/:id", (req, res) => {
+  let { id } = req.params;
+  Student.deleteOne({ id })
+    .then((meg) => {
+      console.log(meg);
+      res.send("Deleted successfully.");
+    })
+    .catch((e) => {
+      console.log(e);
+      res.send("Deleted failed");
+    });
+});
+
 app.get("/*", (req, res) => {
   res.status(404);
   res.send("Not allowed.");
